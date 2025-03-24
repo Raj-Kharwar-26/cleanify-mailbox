@@ -1,3 +1,4 @@
+
 import { google } from 'googleapis';
 
 export interface EmailData {
@@ -23,17 +24,22 @@ export class EmailService {
   private static gmail = google.gmail('v1');
 
   static getAuthUrl(): string {
-    const oauth2Client = new google.auth.OAuth2(
-      import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
-      window.location.origin + '/auth/callback'
-    );
+    try {
+      const oauth2Client = new google.auth.OAuth2(
+        import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        window.location.origin + '/auth/callback'
+      );
 
-    return oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: ['https://www.googleapis.com/auth/gmail.modify'],
-      prompt: 'consent',
-    });
+      return oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/gmail.modify'],
+        prompt: 'consent',
+      });
+    } catch (error) {
+      console.error('Error generating auth URL:', error);
+      return '';
+    }
   }
 
   static async handleAuthCallback(code: string): Promise<boolean> {
@@ -99,7 +105,7 @@ export class EmailService {
         maxResults: 500,
       });
       
-      // Calculate storage percentage - Gmail API profile data doesn't have a direct storage usage field
+      // Calculate storage percentage using a simpler method
       // Default to 10% if we can't get actual data
       let storagePercent = 10;
       

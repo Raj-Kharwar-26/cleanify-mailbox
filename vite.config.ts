@@ -23,6 +23,18 @@ export default defineConfig(({ mode }) => ({
   define: {
     // Define process.env for libraries that expect it
     'process.env': {},
+    // Add missing process properties that googleapis might use
+    'process.stdout': {},
+    'process.stderr': {},
+    'process.version': '"v16.0.0"',
+    'process.platform': '"browser"',
+    'process': {
+      env: {},
+      stdout: {},
+      stderr: {},
+      version: '"v16.0.0"',
+      platform: '"browser"'
+    },
     'global': {},
   },
 }));
