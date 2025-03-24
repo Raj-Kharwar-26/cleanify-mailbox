@@ -1,4 +1,3 @@
-
 import { google } from 'googleapis';
 
 export interface EmailData {
@@ -100,20 +99,15 @@ export class EmailService {
         maxResults: 500,
       });
       
-      // Fix the storage issue by using messagesTotal and threadsTotal
-      // The Gmail API doesn't directly expose storage in bytes,
-      // but we can estimate based on quota and message counts
-      const quotaInBytes = 15 * 1024 * 1024 * 1024; // 15GB in bytes
-      
+      // Calculate storage percentage - Gmail API profile data doesn't have a direct storage usage field
       // Default to 10% if we can't get actual data
       let storagePercent = 10;
       
-      if (profile.data.quotaUsagePercentage) {
-        // If the API directly gives us percentage, use it
-        storagePercent = Number(profile.data.quotaUsagePercentage);
-      } else if (profile.data.messagesTotal) {
+      // Try to use the data we have to estimate storage usage
+      if (profile.data && typeof profile.data.messagesTotal === 'string') {
         // Rough estimation based on message count (very approximate)
         // Assume average email size of 75KB
+        const quotaInBytes = 15 * 1024 * 1024 * 1024; // 15GB in bytes
         const estimatedUsage = Number(profile.data.messagesTotal) * 75 * 1024;
         storagePercent = Math.floor((estimatedUsage / quotaInBytes) * 100);
       }
