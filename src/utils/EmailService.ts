@@ -68,95 +68,90 @@ export class EmailService {
       const oauth2Client = this.getAuthClient();
       if (!oauth2Client) return null;
 
-      // Wrap API calls in try-catch to handle potential browser compatibility issues
-      let profile;
+      // Default values for when API calls fail
+      let totalCount = 0;
+      let spamCount = 0;
+      let promotionalCount = 0;
+      let unreadCount = 0;
+      let storagePercent = 10; // Default to 10%
+
       try {
         // Get profile for storage info
-        profile = await this.gmail.users.getProfile({
+        const profile = await this.gmail.users.getProfile({
           auth: oauth2Client,
           userId: 'me',
         });
+        
+        if (profile?.data && typeof profile.data.messagesTotal === 'string') {
+          // Rough estimation based on message count (very approximate)
+          // Assume average email size of 75KB
+          const quotaInBytes = 15 * 1024 * 1024 * 1024; // 15GB in bytes
+          const estimatedUsage = Number(profile.data.messagesTotal) * 75 * 1024;
+          storagePercent = Math.floor((estimatedUsage / quotaInBytes) * 100);
+        }
       } catch (err) {
         console.error('Error fetching profile:', err);
-        profile = { data: { messagesTotal: '1000' } }; // Fallback value
       }
       
-      let totalRes;
       try {
         // Get messages count
-        totalRes = await this.gmail.users.messages.list({
+        const totalRes = await this.gmail.users.messages.list({
           auth: oauth2Client,
           userId: 'me',
           maxResults: 1,
         });
+        totalCount = Number(totalRes?.data?.resultSizeEstimate) || 0;
       } catch (err) {
         console.error('Error fetching total messages:', err);
-        totalRes = { data: { resultSizeEstimate: 0 } }; // Fallback value
       }
       
-      let spamRes;
       try {
         // Get spam count
-        spamRes = await this.gmail.users.messages.list({
+        const spamRes = await this.gmail.users.messages.list({
           auth: oauth2Client,
           userId: 'me',
           q: 'in:spam',
           maxResults: 500,
         });
+        spamCount = spamRes?.data?.messages?.length || 0;
       } catch (err) {
         console.error('Error fetching spam messages:', err);
-        spamRes = { data: { messages: [] } }; // Fallback value
       }
       
-      let promotionalRes;
       try {
         // Get promotional
-        promotionalRes = await this.gmail.users.messages.list({
+        const promotionalRes = await this.gmail.users.messages.list({
           auth: oauth2Client,
           userId: 'me',
           q: 'category:promotions',
           maxResults: 500,
         });
+        promotionalCount = promotionalRes?.data?.messages?.length || 0;
       } catch (err) {
         console.error('Error fetching promotional messages:', err);
-        promotionalRes = { data: { messages: [] } }; // Fallback value
       }
       
-      let unreadRes;
       try {
         // Get unread
-        unreadRes = await this.gmail.users.messages.list({
+        const unreadRes = await this.gmail.users.messages.list({
           auth: oauth2Client,
           userId: 'me',
           q: 'is:unread',
           maxResults: 500,
         });
+        unreadCount = unreadRes?.data?.messages?.length || 0;
       } catch (err) {
         console.error('Error fetching unread messages:', err);
-        unreadRes = { data: { messages: [] } }; // Fallback value
-      }
-      
-      // Calculate storage percentage using a simpler method
-      // Default to 10% if we can't get actual data
-      let storagePercent = 10;
-      
-      // Try to use the data we have to estimate storage usage
-      if (profile?.data && typeof profile.data.messagesTotal === 'string') {
-        // Rough estimation based on message count (very approximate)
-        // Assume average email size of 75KB
-        const quotaInBytes = 15 * 1024 * 1024 * 1024; // 15GB in bytes
-        const estimatedUsage = Number(profile.data.messagesTotal) * 75 * 1024;
-        storagePercent = Math.floor((estimatedUsage / quotaInBytes) * 100);
       }
       
       // Make sure percentage is between 0-100
       storagePercent = Math.max(0, Math.min(100, storagePercent));
       
       return {
-        total: Number(totalRes?.data?.resultSizeEstimate) || 0,
-        spam: (spamRes?.data?.messages?.length || 0),
-        promotional: (promotionalRes?.data?.messages?.length || 0),
-        unread: (unreadRes?.data?.messages?.length || 0),
+        total: totalCount,
+        spam: spamCount,
+        promotional: promotionalCount,
+        unread: unreadCount,
         storage: storagePercent
       };
     } catch (error) {
@@ -220,20 +215,29 @@ export class EmailService {
       const oauth2Client = this.getAuthClient();
       if (!oauth2Client) return [];
 
-      const res = await this.gmail.users.messages.list({
-        auth: oauth2Client,
-        userId: 'me',
-        q: query,
-        maxResults,
-      });
+      let messages: Array<{id?: string, threadId?: string}> = [];
+      
+      try {
+        const res = await this.gmail.users.messages.list({
+          auth: oauth2Client,
+          userId: 'me',
+          q: query,
+          maxResults,
+        });
+        
+        messages = res.data.messages || [];
+      } catch (error) {
+        console.error('Error listing messages:', error);
+        return [];
+      }
 
-      if (!res.data.messages || res.data.messages.length === 0) {
+      if (messages.length === 0) {
         return [];
       }
 
       const emails: EmailData[] = [];
       
-      for (const message of res.data.messages) {
+      for (const message of messages) {
         try {
           const msgDetail = await this.gmail.users.messages.get({
             auth: oauth2Client,

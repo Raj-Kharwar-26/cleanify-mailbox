@@ -4,6 +4,36 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+// Mock EventEmitter class with proper TypeScript types
+interface EventEmitterEvents {
+  [event: string]: Array<(...args: any[]) => void>;
+}
+
+// Define an EventEmitter class that mimics Node's EventEmitter
+class EventEmitter {
+  private events: EventEmitterEvents = {};
+
+  on(event: string, listener: (...args: any[]) => void): this {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].push(listener);
+    return this;
+  }
+
+  emit(event: string, ...args: any[]): boolean {
+    if (!this.events[event]) return false;
+    this.events[event].forEach(listener => listener(...args));
+    return true;
+  }
+
+  removeListener(event: string, listener: (...args: any[]) => void): this {
+    if (!this.events[event]) return this;
+    this.events[event] = this.events[event].filter(l => l !== listener);
+    return this;
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -38,28 +68,7 @@ export default defineConfig(({ mode }) => ({
     'global': {},
     // Mock the EventEmitter from Node.js
     'node:events': {
-      EventEmitter: class EventEmitter {
-        constructor() {
-          this.events = {};
-        }
-        on(event, listener) {
-          if (!this.events[event]) {
-            this.events[event] = [];
-          }
-          this.events[event].push(listener);
-          return this;
-        }
-        emit(event, ...args) {
-          if (!this.events[event]) return false;
-          this.events[event].forEach(listener => listener(...args));
-          return true;
-        }
-        removeListener(event, listener) {
-          if (!this.events[event]) return this;
-          this.events[event] = this.events[event].filter(l => l !== listener);
-          return this;
-        }
-      }
+      EventEmitter
     }
   },
 }));
