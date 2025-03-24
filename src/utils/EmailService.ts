@@ -68,49 +68,80 @@ export class EmailService {
       const oauth2Client = this.getAuthClient();
       if (!oauth2Client) return null;
 
-      // Get profile for storage info
-      const profile = await this.gmail.users.getProfile({
-        auth: oauth2Client,
-        userId: 'me',
-      });
+      // Wrap API calls in try-catch to handle potential browser compatibility issues
+      let profile;
+      try {
+        // Get profile for storage info
+        profile = await this.gmail.users.getProfile({
+          auth: oauth2Client,
+          userId: 'me',
+        });
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        profile = { data: { messagesTotal: '1000' } }; // Fallback value
+      }
       
-      // Get messages count
-      const totalRes = await this.gmail.users.messages.list({
-        auth: oauth2Client,
-        userId: 'me',
-        maxResults: 1,
-      });
+      let totalRes;
+      try {
+        // Get messages count
+        totalRes = await this.gmail.users.messages.list({
+          auth: oauth2Client,
+          userId: 'me',
+          maxResults: 1,
+        });
+      } catch (err) {
+        console.error('Error fetching total messages:', err);
+        totalRes = { data: { resultSizeEstimate: 0 } }; // Fallback value
+      }
       
-      // Get spam count
-      const spamRes = await this.gmail.users.messages.list({
-        auth: oauth2Client,
-        userId: 'me',
-        q: 'in:spam',
-        maxResults: 500,
-      });
+      let spamRes;
+      try {
+        // Get spam count
+        spamRes = await this.gmail.users.messages.list({
+          auth: oauth2Client,
+          userId: 'me',
+          q: 'in:spam',
+          maxResults: 500,
+        });
+      } catch (err) {
+        console.error('Error fetching spam messages:', err);
+        spamRes = { data: { messages: [] } }; // Fallback value
+      }
       
-      // Get promotional
-      const promotionalRes = await this.gmail.users.messages.list({
-        auth: oauth2Client,
-        userId: 'me',
-        q: 'category:promotions',
-        maxResults: 500,
-      });
+      let promotionalRes;
+      try {
+        // Get promotional
+        promotionalRes = await this.gmail.users.messages.list({
+          auth: oauth2Client,
+          userId: 'me',
+          q: 'category:promotions',
+          maxResults: 500,
+        });
+      } catch (err) {
+        console.error('Error fetching promotional messages:', err);
+        promotionalRes = { data: { messages: [] } }; // Fallback value
+      }
       
-      // Get unread
-      const unreadRes = await this.gmail.users.messages.list({
-        auth: oauth2Client,
-        userId: 'me',
-        q: 'is:unread',
-        maxResults: 500,
-      });
+      let unreadRes;
+      try {
+        // Get unread
+        unreadRes = await this.gmail.users.messages.list({
+          auth: oauth2Client,
+          userId: 'me',
+          q: 'is:unread',
+          maxResults: 500,
+        });
+      } catch (err) {
+        console.error('Error fetching unread messages:', err);
+        unreadRes = { data: { messages: [] } }; // Fallback value
+      }
       
       // Calculate storage percentage using a simpler method
       // Default to 10% if we can't get actual data
       let storagePercent = 10;
       
       // Try to use the data we have to estimate storage usage
-      if (profile.data && typeof profile.data.messagesTotal === 'string') {
+      if (profile?.data && typeof profile.data.messagesTotal === 'string') {
         // Rough estimation based on message count (very approximate)
         // Assume average email size of 75KB
         const quotaInBytes = 15 * 1024 * 1024 * 1024; // 15GB in bytes
@@ -122,10 +153,10 @@ export class EmailService {
       storagePercent = Math.max(0, Math.min(100, storagePercent));
       
       return {
-        total: Number(totalRes.data.resultSizeEstimate) || 0,
-        spam: (spamRes.data.messages?.length || 0),
-        promotional: (promotionalRes.data.messages?.length || 0),
-        unread: (unreadRes.data.messages?.length || 0),
+        total: Number(totalRes?.data?.resultSizeEstimate) || 0,
+        spam: (spamRes?.data?.messages?.length || 0),
+        promotional: (promotionalRes?.data?.messages?.length || 0),
+        unread: (unreadRes?.data?.messages?.length || 0),
         storage: storagePercent
       };
     } catch (error) {
@@ -203,26 +234,31 @@ export class EmailService {
       const emails: EmailData[] = [];
       
       for (const message of res.data.messages) {
-        const msgDetail = await this.gmail.users.messages.get({
-          auth: oauth2Client,
-          userId: 'me',
-          id: message.id as string,
-        });
+        try {
+          const msgDetail = await this.gmail.users.messages.get({
+            auth: oauth2Client,
+            userId: 'me',
+            id: message.id as string,
+          });
 
-        const headers = msgDetail.data.payload?.headers || [];
-        const subject = headers.find(h => h.name === 'Subject')?.value || '(No Subject)';
-        const from = headers.find(h => h.name === 'From')?.value || '';
-        const date = headers.find(h => h.name === 'Date')?.value || '';
+          const headers = msgDetail.data.payload?.headers || [];
+          const subject = headers.find(h => h.name === 'Subject')?.value || '(No Subject)';
+          const from = headers.find(h => h.name === 'From')?.value || '';
+          const date = headers.find(h => h.name === 'Date')?.value || '';
 
-        emails.push({
-          id: message.id as string,
-          threadId: message.threadId as string,
-          subject,
-          snippet: msgDetail.data.snippet || '',
-          from,
-          date,
-          category,
-        });
+          emails.push({
+            id: message.id as string,
+            threadId: message.threadId as string,
+            subject,
+            snippet: msgDetail.data.snippet || '',
+            from,
+            date,
+            category,
+          });
+        } catch (error) {
+          console.error(`Error fetching details for message ${message.id}:`, error);
+          // Continue with next message
+        }
       }
 
       return emails;
