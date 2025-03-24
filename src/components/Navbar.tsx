@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,7 +46,6 @@ const Navbar = () => {
           <span className="font-semibold text-xl">CleanMail</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <Link 
             to="/" 
@@ -81,7 +79,6 @@ const Navbar = () => {
           </div>
         </nav>
 
-        {/* Mobile Menu Button */}
         <button 
           className="md:hidden focus:outline-none" 
           onClick={toggleMenu}
@@ -95,7 +92,6 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Menu */}
       <div 
         className={`fixed inset-0 bg-background md:hidden z-40 transition-transform duration-300 ease-in-out transform ${
           isMenuOpen ? "translate-x-0" : "translate-x-full"
