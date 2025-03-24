@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -6,16 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowUpRight, Check, CheckCircle, ChevronDown, ChevronRight, Clock, Mail, Trash2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  ArrowUpRight, Check, CheckCircle, ChevronDown, ChevronRight, 
+  Clock, Mail, Trash2, AlertCircle, Lock 
+} from "lucide-react";
+import { EmailService, EmailData, EmailStats } from "@/utils/EmailService";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [spamEmails, setSpamEmails] = useState<EmailData[]>([]);
+  const [promotionalEmails, setPromotionalEmails] = useState<EmailData[]>([]);
+  const [selectedEmails, setSelectedEmails] = useState<{[id: string]: boolean}>({});
 
-  // Simulated data
-  const [emailStats, setEmailStats] = useState({
+  // Email stats
+  const [emailStats, setEmailStats] = useState<EmailStats>({
     total: 0,
     spam: 0,
     promotional: 0,
@@ -25,12 +33,43 @@ const Dashboard = () => {
 
   // Check authentication
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated !== "true") {
-      navigate("/login");
-    } else {
-      // Simulate data loading
-      setTimeout(() => {
+    const checkAuth = async () => {
+      setLoading(true);
+      const isLoggedIn = localStorage.getItem("isAuthenticated") === "true";
+      
+      if (!isLoggedIn) {
+        navigate("/login");
+        return;
+      }
+      
+      // Check Gmail authentication
+      const hasGmailAuth = EmailService.isAuthenticated();
+      setIsAuthenticated(hasGmailAuth);
+      
+      if (hasGmailAuth) {
+        try {
+          // Fetch real email stats
+          const stats = await EmailService.getEmailStats();
+          if (stats) {
+            setEmailStats(stats);
+            
+            // Fetch sample emails
+            const spam = await EmailService.getSpamEmails(10);
+            const promo = await EmailService.getPromotionalEmails(10);
+            
+            setSpamEmails(spam);
+            setPromotionalEmails(promo);
+          }
+        } catch (error) {
+          console.error("Error fetching email data:", error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch your email data. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Use sample data for unauthenticated users
         setEmailStats({
           total: 1287,
           spam: 189,
@@ -38,31 +77,200 @@ const Dashboard = () => {
           unread: 42,
           storage: 65
         });
-        setLoading(false);
-      }, 1500);
-    }
-  }, [navigate]);
+      }
+      
+      setLoading(false);
+    };
 
-  const handleCleanEmails = () => {
+    checkAuth();
+  }, [navigate, toast]);
+
+  const handleGmailConnect = () => {
+    const authUrl = EmailService.getAuthUrl();
+    window.location.href = authUrl;
+  };
+
+  const handleSelectEmail = (id: string) => {
+    setSelectedEmails(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleCleanEmails = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please connect your Gmail account to clean emails.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Cleaning emails",
       description: "Your emails are being cleaned...",
     });
     
-    // Simulate email cleaning
-    setTimeout(() => {
-      setEmailStats(prev => ({
-        ...prev,
-        spam: 0,
-        promotional: Math.floor(prev.promotional / 3),
-        total: prev.total - prev.spam - Math.floor(prev.promotional * 2/3),
-      }));
+    try {
+      // Get selected emails or all if none selected
+      const spamToDelete = Object.keys(selectedEmails).filter(id => 
+        selectedEmails[id] && spamEmails.some(email => email.id === id)
+      );
       
+      const promoToDelete = Object.keys(selectedEmails).filter(id => 
+        selectedEmails[id] && promotionalEmails.some(email => email.id === id)
+      );
+      
+      // Default to all if none selected
+      const spamIds = spamToDelete.length > 0 ? spamToDelete : spamEmails.map(e => e.id);
+      const promoIds = promoToDelete.length > 0 ? promoToDelete : [];
+      
+      const allIdsToDelete = [...spamIds, ...promoIds];
+      
+      if (allIdsToDelete.length === 0) {
+        toast({
+          title: "No emails selected",
+          description: "Please select emails to clean or switch to the spam tab.",
+        });
+        return;
+      }
+      
+      const success = await EmailService.deleteEmails(allIdsToDelete);
+      
+      if (success) {
+        // Update stats
+        setEmailStats(prev => ({
+          ...prev,
+          spam: prev.spam - spamIds.length,
+          promotional: prev.promotional - promoIds.length,
+          total: prev.total - allIdsToDelete.length,
+        }));
+        
+        // Remove deleted emails from lists
+        setSpamEmails(prev => prev.filter(email => !spamIds.includes(email.id)));
+        setPromotionalEmails(prev => prev.filter(email => !promoIds.includes(email.id)));
+        
+        // Clear selection
+        setSelectedEmails({});
+        
+        toast({
+          title: "Emails cleaned successfully",
+          description: `${allIdsToDelete.length} emails have been moved to trash.`,
+        });
+      } else {
+        toast({
+          title: "Failed to clean emails",
+          description: "There was an error cleaning your emails. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error cleaning emails:", error);
       toast({
-        title: "Emails cleaned successfully",
-        description: "Your inbox is now clean and organized.",
+        title: "Error",
+        description: "An unexpected error occurred while cleaning emails.",
+        variant: "destructive",
       });
-    }, 2000);
+    }
+  };
+
+  const handleDeleteSpam = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please connect your Gmail account to delete spam.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Deleting spam emails",
+      description: "Your spam emails are being deleted...",
+    });
+    
+    try {
+      const spamIds = spamEmails.map(email => email.id);
+      const success = await EmailService.deleteEmails(spamIds);
+      
+      if (success) {
+        setEmailStats(prev => ({
+          ...prev,
+          spam: 0,
+          total: prev.total - prev.spam,
+        }));
+        
+        setSpamEmails([]);
+        
+        toast({
+          title: "Spam deleted",
+          description: "All spam emails have been removed.",
+        });
+      } else {
+        toast({
+          title: "Failed to delete spam",
+          description: "There was an error deleting your spam emails. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting spam:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while deleting spam.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCleanPromotional = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please connect your Gmail account to clean promotional emails.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Cleaning promotional emails",
+      description: "Your promotional emails are being cleaned...",
+    });
+    
+    try {
+      const promoIds = promotionalEmails.map(email => email.id);
+      const success = await EmailService.deleteEmails(promoIds);
+      
+      if (success) {
+        setEmailStats(prev => ({
+          ...prev,
+          promotional: Math.max(0, prev.promotional - promoIds.length),
+          total: prev.total - promoIds.length,
+        }));
+        
+        setPromotionalEmails([]);
+        
+        toast({
+          title: "Promotional emails cleaned",
+          description: "All promotional emails have been removed.",
+        });
+      } else {
+        toast({
+          title: "Failed to clean promotional emails",
+          description: "There was an error cleaning your promotional emails. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error cleaning promotional emails:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while cleaning promotional emails.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -85,6 +293,19 @@ const Dashboard = () => {
       <DashboardHeader />
       <main className="flex-1 py-8">
         <div className="container-custom">
+          {!isAuthenticated && (
+            <Alert className="mb-8 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <AlertTitle>Connect your Gmail account</AlertTitle>
+              <AlertDescription className="mt-2 flex flex-col gap-4">
+                <p>To clean your actual emails, you need to connect your Gmail account. This will allow CleanMail to access and clean your emails.</p>
+                <Button onClick={handleGmailConnect} className="w-full sm:w-auto">
+                  <Lock className="mr-2 h-4 w-4" /> Connect Gmail Account
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
@@ -98,6 +319,7 @@ const Dashboard = () => {
                     <TabsTrigger value="promotional">Promotional</TabsTrigger>
                   </TabsList>
                   
+                  {/* Overview Tab */}
                   <TabsContent value="overview" className="mt-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                       <div className="bg-secondary/50 rounded-lg p-5">
@@ -190,6 +412,7 @@ const Dashboard = () => {
                     </Button>
                   </TabsContent>
                   
+                  {/* Spam Tab */}
                   <TabsContent value="spam" className="mt-0">
                     <div className="bg-secondary/50 rounded-lg p-6 mb-6">
                       <div className="flex justify-between items-start mb-4">
@@ -203,49 +426,55 @@ const Dashboard = () => {
                       <Button 
                         className="w-full"
                         variant="destructive"
-                        onClick={() => {
-                          toast({
-                            title: "Deleting spam emails",
-                            description: "Your spam emails are being deleted...",
-                          });
-                          setTimeout(() => {
-                            setEmailStats(prev => ({
-                              ...prev,
-                              spam: 0,
-                              total: prev.total - prev.spam,
-                            }));
-                            toast({
-                              title: "Spam deleted",
-                              description: "All spam emails have been removed.",
-                            });
-                          }, 1500);
-                        }}
+                        onClick={handleDeleteSpam}
                       >
                         Delete All Spam
                       </Button>
                     </div>
                     
                     <div className="space-y-3">
-                      <h3 className="font-medium mb-4">Sample Spam Emails</h3>
+                      <h3 className="font-medium mb-4">
+                        {isAuthenticated ? 'Your Spam Emails' : 'Sample Spam Emails'}
+                      </h3>
                       
                       {emailStats.spam > 0 ? (
                         <>
-                          {[
-                            { subject: "You've WON a FREE iPhone 15 Pro!!!", sender: "prizes@winbig-now.com" },
-                            { subject: "URGENT: Your Account Needs Verification", sender: "secure-verify@bank-alerts.net" },
-                            { subject: "Make $5000 Daily From Home - Guaranteed!", sender: "wealth@easy-money.biz" },
-                          ].map((email, index) => (
-                            <div 
-                              key={index} 
-                              className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg p-4"
-                            >
-                              <div className="flex justify-between mb-1">
-                                <h4 className="font-medium truncate mr-4">{email.subject}</h4>
-                                <Check className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          {isAuthenticated ? (
+                            spamEmails.map((email) => (
+                              <div 
+                                key={email.id} 
+                                className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg p-4"
+                                onClick={() => handleSelectEmail(email.id)}
+                              >
+                                <div className="flex justify-between mb-1">
+                                  <h4 className="font-medium truncate mr-4">{email.subject}</h4>
+                                  <Check 
+                                    className={`h-4 w-4 ${selectedEmails[email.id] ? 'text-green-500' : 'text-red-500'} flex-shrink-0`} 
+                                  />
+                                </div>
+                                <p className="text-sm text-foreground/70 truncate">{email.from}</p>
                               </div>
-                              <p className="text-sm text-foreground/70 truncate">{email.sender}</p>
-                            </div>
-                          ))}
+                            ))
+                          ) : (
+                            <>
+                              {[
+                                { subject: "You've WON a FREE iPhone 15 Pro!!!", sender: "prizes@winbig-now.com" },
+                                { subject: "URGENT: Your Account Needs Verification", sender: "secure-verify@bank-alerts.net" },
+                                { subject: "Make $5000 Daily From Home - Guaranteed!", sender: "wealth@easy-money.biz" },
+                              ].map((email, index) => (
+                                <div 
+                                  key={index} 
+                                  className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-lg p-4"
+                                >
+                                  <div className="flex justify-between mb-1">
+                                    <h4 className="font-medium truncate mr-4">{email.subject}</h4>
+                                    <Check className="h-4 w-4 text-red-500 flex-shrink-0" />
+                                  </div>
+                                  <p className="text-sm text-foreground/70 truncate">{email.sender}</p>
+                                </div>
+                              ))}
+                            </>
+                          )}
                         </>
                       ) : (
                         <div className="bg-secondary/50 rounded-lg p-6 text-center">
@@ -259,6 +488,7 @@ const Dashboard = () => {
                     </div>
                   </TabsContent>
                   
+                  {/* Promotional Tab */}
                   <TabsContent value="promotional" className="mt-0">
                     <div className="bg-secondary/50 rounded-lg p-6 mb-6">
                       <div className="flex justify-between items-start mb-4">
@@ -271,49 +501,55 @@ const Dashboard = () => {
                       </p>
                       <Button 
                         className="w-full bg-orange-500 hover:bg-orange-600"
-                        onClick={() => {
-                          toast({
-                            title: "Cleaning promotional emails",
-                            description: "Your promotional emails are being cleaned...",
-                          });
-                          setTimeout(() => {
-                            setEmailStats(prev => ({
-                              ...prev,
-                              promotional: Math.floor(prev.promotional / 3),
-                              total: prev.total - Math.floor(prev.promotional * 2/3),
-                            }));
-                            toast({
-                              title: "Promotional emails cleaned",
-                              description: "Unnecessary promotional emails have been removed.",
-                            });
-                          }, 1500);
-                        }}
+                        onClick={handleCleanPromotional}
                       >
                         Clean Promotional Emails
                       </Button>
                     </div>
                     
                     <div className="space-y-3">
-                      <h3 className="font-medium mb-4">Sample Promotional Emails</h3>
+                      <h3 className="font-medium mb-4">
+                        {isAuthenticated ? 'Your Promotional Emails' : 'Sample Promotional Emails'}
+                      </h3>
                       
                       {emailStats.promotional > 0 ? (
                         <>
-                          {[
-                            { subject: "FLASH SALE: 70% OFF EVERYTHING!", sender: "deals@fashion-store.com" },
-                            { subject: "Limited Time Offer - Act Now!", sender: "newsletter@tech-gadgets.com" },
-                            { subject: "New arrivals just for you", sender: "updates@footwear-brand.com" },
-                          ].map((email, index) => (
-                            <div 
-                              key={index} 
-                              className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-lg p-4"
-                            >
-                              <div className="flex justify-between mb-1">
-                                <h4 className="font-medium truncate mr-4">{email.subject}</h4>
-                                <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                          {isAuthenticated ? (
+                            promotionalEmails.map((email) => (
+                              <div 
+                                key={email.id} 
+                                className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-lg p-4"
+                                onClick={() => handleSelectEmail(email.id)}
+                              >
+                                <div className="flex justify-between mb-1">
+                                  <h4 className="font-medium truncate mr-4">{email.subject}</h4>
+                                  <Check 
+                                    className={`h-4 w-4 ${selectedEmails[email.id] ? 'text-green-500' : 'text-orange-500'} flex-shrink-0`} 
+                                  />
+                                </div>
+                                <p className="text-sm text-foreground/70 truncate">{email.from}</p>
                               </div>
-                              <p className="text-sm text-foreground/70 truncate">{email.sender}</p>
-                            </div>
-                          ))}
+                            ))
+                          ) : (
+                            <>
+                              {[
+                                { subject: "FLASH SALE: 70% OFF EVERYTHING!", sender: "deals@fashion-store.com" },
+                                { subject: "Limited Time Offer - Act Now!", sender: "newsletter@tech-gadgets.com" },
+                                { subject: "New arrivals just for you", sender: "updates@footwear-brand.com" },
+                              ].map((email, index) => (
+                                <div 
+                                  key={index} 
+                                  className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-lg p-4"
+                                >
+                                  <div className="flex justify-between mb-1">
+                                    <h4 className="font-medium truncate mr-4">{email.subject}</h4>
+                                    <Check className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                                  </div>
+                                  <p className="text-sm text-foreground/70 truncate">{email.sender}</p>
+                                </div>
+                              ))}
+                            </>
+                          )}
                         </>
                       ) : (
                         <div className="bg-secondary/50 rounded-lg p-6 text-center">
