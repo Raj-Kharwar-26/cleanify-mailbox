@@ -52,8 +52,17 @@ const AuthForm = () => {
     // Simulate authentication process
     setTimeout(() => {
       setIsLoading(false);
-      // For demo purposes, always succeed authentication
+      
+      // Store authentication state
       localStorage.setItem("isAuthenticated", "true");
+      
+      // Store user data (for profile display)
+      const userData = activeTab === "login" 
+        ? { name: formData.name || "John Doe" } // Default for login demo
+        : { name: formData.name };
+      
+      localStorage.setItem("userData", JSON.stringify(userData));
+      
       toast({
         title: activeTab === "login" ? "Logged in successfully" : "Account created successfully",
         description: "Redirecting to dashboard...",

@@ -1,18 +1,42 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bell, ChevronDown, LogOut, Mail, Search, Settings, User } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const DashboardHeader = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [emailInput, setEmailInput] = useState("");
+  const [userInitials, setUserInitials] = useState("JD");
+
+  useEffect(() => {
+    // Get user data from localStorage if available
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      try {
+        const { name } = JSON.parse(userData);
+        if (name) {
+          // Extract initials from the name
+          const nameParts = name.split(" ");
+          const initials = nameParts.length > 1 
+            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+            : name.substring(0, 2);
+          setUserInitials(initials.toUpperCase());
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userData");
     navigate("/");
     toast({
       title: "Logged out",
@@ -91,9 +115,11 @@ const DashboardHeader = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="rounded-full h-10 w-10 p-0">
-                  <div className="rounded-full bg-primary/10 w-full h-full flex items-center justify-center text-primary font-medium">
-                    JD
-                  </div>
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
