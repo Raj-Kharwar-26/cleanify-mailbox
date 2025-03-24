@@ -361,8 +361,7 @@ const Dashboard = () => {
                           </div>
                           <Progress 
                             value={(emailStats.spam / emailStats.total) * 100} 
-                            className="h-1.5"
-                            indicatorClassName="bg-red-500"
+                            className="h-1.5 bg-red-200 dark:bg-red-950/50"
                           />
                         </div>
                       </div>
@@ -378,8 +377,7 @@ const Dashboard = () => {
                           </div>
                           <Progress 
                             value={(emailStats.promotional / emailStats.total) * 100} 
-                            className="h-1.5"
-                            indicatorClassName="bg-orange-500"
+                            className="h-1.5 bg-orange-200 dark:bg-orange-950/50"
                           />
                         </div>
                       </div>
@@ -397,8 +395,7 @@ const Dashboard = () => {
                           </div>
                           <Progress 
                             value={((emailStats.total - emailStats.spam - emailStats.promotional) / emailStats.total) * 100} 
-                            className="h-1.5"
-                            indicatorClassName="bg-blue-500"
+                            className="h-1.5 bg-blue-200 dark:bg-blue-950/50"
                           />
                         </div>
                       </div>
@@ -632,8 +629,7 @@ const Dashboard = () => {
                     </div>
                     <Progress 
                       value={(emailStats.spam / emailStats.total) * 100} 
-                      className="h-1.5"
-                      indicatorClassName="bg-red-500"
+                      className="h-1.5 bg-red-200 dark:bg-red-950/50"
                     />
                   </div>
                   
@@ -644,8 +640,7 @@ const Dashboard = () => {
                     </div>
                     <Progress 
                       value={(emailStats.promotional / emailStats.total) * 100} 
-                      className="h-1.5"
-                      indicatorClassName="bg-orange-500"
+                      className="h-1.5 bg-orange-200 dark:bg-orange-950/50"
                     />
                   </div>
                   

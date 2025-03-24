@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Bell, ChevronDown, LogOut, Mail, Search, Settings, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const DashboardHeader = () => {
@@ -36,14 +36,14 @@ const DashboardHeader = () => {
     <header className="bg-background border-b border-border sticky top-0 z-10">
       <div className="container-custom py-4">
         <div className="flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center">
+          {/* Logo with Link to homepage */}
+          <Link to="/" className="flex items-center group">
             <div className="relative w-10 h-10 mr-3 overflow-hidden rounded-lg bg-primary/10 flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary to-blue-600 opacity-80"></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary to-blue-600 opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative text-primary-foreground font-bold text-xl">E</span>
             </div>
             <span className="font-semibold text-xl hidden sm:inline-block">CleanMail</span>
-          </div>
+          </Link>
 
           {/* Email input form */}
           <form onSubmit={handleEmailSubmit} className="flex-1 max-w-lg">

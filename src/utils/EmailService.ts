@@ -100,8 +100,12 @@ export class EmailService {
         maxResults: 500,
       });
       
+      // Fix the storageUsed property access
+      const storageUsed = profile.data.storageUsed ? 
+        Number(profile.data.storageUsed) : 0;
+      
       const storagePercent = Math.floor(
-        (Number(profile.data.storageUsed) / 15 * 1024 * 1024 * 1024) * 100
+        (storageUsed / (15 * 1024 * 1024 * 1024)) * 100
       );
       
       return {
