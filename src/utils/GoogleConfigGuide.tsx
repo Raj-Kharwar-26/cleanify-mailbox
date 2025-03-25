@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,12 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const GoogleConfigGuide = () => {
+interface GoogleConfigGuideProps {
+  clientId?: string;
+  clientSecret?: string;
+}
+
+const GoogleConfigGuide: React.FC<GoogleConfigGuideProps> = ({ clientId, clientSecret }) => {
   const { toast } = useToast();
   
   const copyToClipboard = (text: string) => {
@@ -76,43 +80,47 @@ const GoogleConfigGuide = () => {
         
         <Separator className="my-4" />
         
-        <h3 className="font-semibold text-lg">5. Add Client ID to your app</h3>
-        <p>Create a <code>.env.local</code> file in your project root with:</p>
-        <div className="bg-muted p-3 rounded-md font-mono text-sm my-2 relative group">
-          <code>
-            VITE_GOOGLE_CLIENT_ID=your_client_id_here<br />
-            VITE_GOOGLE_CLIENT_SECRET=your_client_secret_here
-          </code>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => copyToClipboard("VITE_GOOGLE_CLIENT_ID=your_client_id_here\nVITE_GOOGLE_CLIENT_SECRET=your_client_secret_here")}
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground mt-2">Note: Make sure to add .env.local to your .gitignore file to keep your credentials secure.</p>
-        
-        <div className="bg-primary/5 p-4 rounded-md border border-primary/20 mt-4">
-          <h4 className="font-semibold text-primary mb-2">Using your credentials</h4>
-          <p className="mb-2">Replace the placeholders with your actual credentials:</p>
-          <div className="bg-muted p-3 rounded-md font-mono text-sm my-2 relative group">
-            <code>
-              VITE_GOOGLE_CLIENT_ID=1062456274487-1no3a0ddd06vl0eiggcmdb0v9t7rstim.apps.googleusercontent.com<br />
-              VITE_GOOGLE_CLIENT_SECRET=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
-            </code>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => copyToClipboard("VITE_GOOGLE_CLIENT_ID=1062456274487-1no3a0ddd06vl0eiggcmdb0v9t7rstim.apps.googleusercontent.com\nVITE_GOOGLE_CLIENT_SECRET=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")}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
+        <h3 className="font-semibold text-lg">5. Credentials Status</h3>
+        {clientId && clientSecret ? (
+          <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-md border border-green-200 dark:border-green-900/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="h-5 w-5 text-green-500" />
+              <h4 className="font-semibold text-green-700 dark:text-green-300">Credentials Successfully Configured</h4>
+            </div>
+            <p className="mb-4">Your Google API credentials have been set up successfully. You can now connect your Gmail account.</p>
+            
+            <h5 className="font-medium text-sm mb-1">Your Client ID:</h5>
+            <div className="bg-muted p-2 rounded-md font-mono text-sm mb-3 flex justify-between items-center">
+              <code className="text-xs break-all">{clientId}</code>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => copyToClipboard(clientId)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <h5 className="font-medium text-sm mb-1">Your Client Secret:</h5>
+            <div className="bg-muted p-2 rounded-md font-mono text-sm mb-2 flex justify-between items-center">
+              <code className="text-xs break-all">{clientSecret}</code>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => copyToClipboard(clientSecret)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-2">
+              <AlertCircle className="h-3 w-3" /> Keep your Client Secret secure. Never commit it to public repositories.
+            </p>
           </div>
-          <p className="text-sm mt-2"><AlertCircle className="inline-block h-4 w-4 mr-1" /> Keep your Client Secret secure. Never commit it to public repositories.</p>
-        </div>
+        ) : (
+          <p className="bg-muted p-3 rounded-md font-mono text-sm my-2 relative group">
+            Credentials not found. Please set up your Google API credentials.
+          </p>
+        )}
       </CardContent>
       <CardFooter>
         <p className="text-sm text-muted-foreground">

@@ -1,12 +1,30 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from "@/components/Navbar";
 import GoogleConfigGuide from "@/utils/GoogleConfigGuide";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const GoogleSetupPage = () => {
-  const clientIdConfigured = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  // Hard-code the client ID since we've received it directly
+  const clientId = "1062456274487-1no3a0ddd06vl0eiggcmdb0v9t7rstim.apps.googleusercontent.com";
+  const clientSecret = "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";
+  const [credentialsSet, setCredentialsSet] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Store credentials in localStorage for the EmailService to use
+    localStorage.setItem('gmail_client_id', clientId);
+    localStorage.setItem('gmail_client_secret', clientSecret);
+    setCredentialsSet(true);
+    
+    // Show a toast to indicate credentials are set
+    toast({
+      title: "Google API Credentials Set",
+      description: "Your Gmail API credentials have been configured successfully.",
+    });
+  }, [toast]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -18,16 +36,23 @@ const GoogleSetupPage = () => {
           Follow the guide below to get started.
         </p>
         
-        {!clientIdConfigured && (
+        {credentialsSet ? (
+          <Alert className="mb-8 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50">
+            <Check className="h-4 w-4 text-green-500" />
+            <AlertDescription>
+              Google Client ID is configured! You can now use Gmail integration features.
+            </AlertDescription>
+          </Alert>
+        ) : (
           <Alert variant="destructive" className="mb-8">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Google Client ID is not configured. Please add your credentials to the .env.local file as shown below.
+              Setting up Google Client ID...
             </AlertDescription>
           </Alert>
         )}
         
-        <GoogleConfigGuide />
+        <GoogleConfigGuide clientId={clientId} clientSecret={clientSecret} />
       </main>
     </div>
   );

@@ -26,8 +26,8 @@ export class EmailService {
   static getAuthUrl(): string {
     try {
       const oauth2Client = new google.auth.OAuth2(
-        import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        localStorage.getItem('gmail_client_id'),
+        localStorage.getItem('gmail_client_secret'),
         window.location.origin + '/auth/callback'
       );
 
@@ -45,8 +45,8 @@ export class EmailService {
   static async handleAuthCallback(code: string): Promise<boolean> {
     try {
       const oauth2Client = new google.auth.OAuth2(
-        import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        localStorage.getItem('gmail_client_id'),
+        localStorage.getItem('gmail_client_secret'),
         window.location.origin + '/auth/callback'
       );
 
@@ -194,8 +194,8 @@ export class EmailService {
     try {
       const tokens = JSON.parse(tokenStr);
       const oauth2Client = new google.auth.OAuth2(
-        import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        localStorage.getItem('gmail_client_id'),
+        localStorage.getItem('gmail_client_secret'),
         window.location.origin + '/auth/callback'
       );
       oauth2Client.setCredentials(tokens);
