@@ -19,10 +19,20 @@ export interface EmailStats {
 
 export class EmailService {
   private static tokenKey = 'gmail_token';
+  private static clientIdKey = 'gmail_client_id';
+
+  static setClientId(clientId: string): void {
+    localStorage.setItem(this.clientIdKey, clientId);
+    console.log('Client ID stored:', clientId);
+  }
+
+  static getClientId(): string | null {
+    return localStorage.getItem(this.clientIdKey);
+  }
 
   static getAuthUrl(): string {
     try {
-      const clientId = localStorage.getItem('gmail_client_id');
+      const clientId = this.getClientId();
       const redirectUri = window.location.origin + '/auth/callback';
       
       if (!clientId) {

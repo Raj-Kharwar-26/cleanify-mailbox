@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useGmailAuth } from "@/hooks/use-gmail-auth";
 import { 
   ArrowUpRight, Check, CheckCircle, ChevronDown, ChevronRight, 
   Clock, Mail, Trash2, AlertCircle, Lock 
@@ -15,9 +16,9 @@ import { EmailService, EmailData, EmailStats } from "@/utils/EmailService";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAuthenticated, handleGmailConnect } = useGmailAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [spamEmails, setSpamEmails] = useState<EmailData[]>([]);
   const [promotionalEmails, setPromotionalEmails] = useState<EmailData[]>([]);
   const [selectedEmails, setSelectedEmails] = useState<{[id: string]: boolean}>({});
@@ -43,10 +44,7 @@ const Dashboard = () => {
       }
       
       // Check Gmail authentication
-      const hasGmailAuth = EmailService.isAuthenticated();
-      setIsAuthenticated(hasGmailAuth);
-      
-      if (hasGmailAuth) {
+      if (isAuthenticated) {
         try {
           // Fetch real email stats
           const stats = await EmailService.getEmailStats();
@@ -83,12 +81,7 @@ const Dashboard = () => {
     };
 
     checkAuth();
-  }, [navigate, toast]);
-
-  const handleGmailConnect = () => {
-    const authUrl = EmailService.getAuthUrl();
-    window.location.href = authUrl;
-  };
+  }, [navigate, toast, isAuthenticated]);
 
   const handleSelectEmail = (id: string) => {
     setSelectedEmails(prev => ({

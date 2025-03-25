@@ -72,7 +72,9 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-    },
+      "events": path.resolve(__dirname, './src/utils/eventEmitter.js'),
+      "node:events": path.resolve(__dirname, './src/utils/eventEmitter.js')
+    }
   },
   define: {
     // Define process.env for libraries that expect it
@@ -107,19 +109,6 @@ export default defineConfig(({ mode }) => ({
         globals: {
           'node:events': 'events'
         }
-      }
-    }
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      'events': {
-        find: /^events$/,
-        replacement: path.resolve(__dirname, './src/utils/eventEmitter.js')
-      },
-      'node:events': {
-        find: /^node:events$/,
-        replacement: path.resolve(__dirname, './src/utils/eventEmitter.js')
       }
     }
   }
