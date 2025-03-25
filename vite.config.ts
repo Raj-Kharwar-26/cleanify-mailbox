@@ -92,8 +92,35 @@ export default defineConfig(({ mode }) => ({
       nextTick: (callback: Function, ...args: any[]) => setTimeout(() => callback(...args), 0)
     },
     'global': 'window',
-    // Mock the node:events module correctly
-    'node:events': { EventEmitter },
-    'events': { EventEmitter }
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      },
+    }
+  },
+  build: {
+    rollupOptions: {
+      external: ['node:events'],
+      output: {
+        globals: {
+          'node:events': 'events'
+        }
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      'events': {
+        find: /^events$/,
+        replacement: path.resolve(__dirname, './src/utils/eventEmitter.js')
+      },
+      'node:events': {
+        find: /^node:events$/,
+        replacement: path.resolve(__dirname, './src/utils/eventEmitter.js')
+      }
+    }
+  }
 }));
