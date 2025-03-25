@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGmailAuth } from '@/hooks/use-gmail-auth';
-import { InfoCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 const ClientIdSetup: React.FC = () => {
   const { clientId, setGmailClientId, isEnvClientId } = useGmailAuth();
@@ -29,7 +29,7 @@ const ClientIdSetup: React.FC = () => {
           {isEnvClientId ? (
             <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-md border border-blue-200 dark:border-blue-900/30">
               <div className="flex items-center gap-2 mb-2">
-                <InfoCircle className="h-5 w-5 text-blue-500" />
+                <Info className="h-5 w-5 text-blue-500" />
                 <h4 className="font-semibold text-blue-700 dark:text-blue-300">Using Environment Variable</h4>
               </div>
               <p>Your Google Client ID is being loaded from the environment variable <code>VITE_GOOGLE_CLIENT_ID</code>.</p>
