@@ -2,8 +2,12 @@
 import React from 'react';
 import Navbar from "@/components/Navbar";
 import GoogleConfigGuide from "@/utils/GoogleConfigGuide";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const GoogleSetupPage = () => {
+  const clientIdConfigured = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -13,6 +17,16 @@ const GoogleSetupPage = () => {
           To enable Gmail integration in CleanMail and fetch your emails, you need to set up a Google Client ID. 
           Follow the guide below to get started.
         </p>
+        
+        {!clientIdConfigured && (
+          <Alert variant="destructive" className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Google Client ID is not configured. Please add your credentials to the .env.local file as shown below.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <GoogleConfigGuide />
       </main>
     </div>
