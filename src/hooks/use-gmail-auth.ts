@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 export const useGmailAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [isEnvClientId, setIsEnvClientId] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -16,6 +17,10 @@ export const useGmailAuth = () => {
     // Check for client ID
     const storedClientId = EmailService.getClientId();
     setClientId(storedClientId);
+    
+    // Check if client ID is from environment variable
+    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    setIsEnvClientId(!!envClientId && envClientId !== 'your_client_id_here' && envClientId === storedClientId);
   }, []);
 
   const handleGmailConnect = useCallback(() => {
@@ -56,6 +61,7 @@ export const useGmailAuth = () => {
   return {
     isAuthenticated,
     clientId,
+    isEnvClientId,
     handleGmailConnect,
     setGmailClientId
   };

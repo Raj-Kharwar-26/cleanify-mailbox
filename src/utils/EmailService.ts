@@ -1,4 +1,3 @@
-
 export interface EmailData {
   id: string;
   threadId: string;
@@ -27,6 +26,15 @@ export class EmailService {
   }
 
   static getClientId(): string | null {
+    // First try to get from environment variable
+    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    
+    // If env var has a value and it's not the placeholder, use it
+    if (envClientId && envClientId !== 'your_client_id_here') {
+      return envClientId;
+    }
+    
+    // Otherwise fall back to localStorage
     return localStorage.getItem(this.clientIdKey);
   }
 
