@@ -4,14 +4,9 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// Mock EventEmitter class with proper TypeScript types
-interface EventEmitterEvents {
-  [event: string]: Array<(...args: any[]) => void>;
-}
-
-// Define an EventEmitter class that mimics Node's EventEmitter
+// Define a complete EventEmitter class that mimics Node's EventEmitter
 class EventEmitter {
-  private events: EventEmitterEvents = {};
+  private events: Record<string, Array<(...args: any[]) => void>> = {};
 
   on(event: string, listener: (...args: any[]) => void): this {
     if (!this.events[event]) {
@@ -30,6 +25,35 @@ class EventEmitter {
   removeListener(event: string, listener: (...args: any[]) => void): this {
     if (!this.events[event]) return this;
     this.events[event] = this.events[event].filter(l => l !== listener);
+    return this;
+  }
+
+  removeAllListeners(event?: string): this {
+    if (event) {
+      this.events[event] = [];
+    } else {
+      this.events = {};
+    }
+    return this;
+  }
+
+  once(event: string, listener: (...args: any[]) => void): this {
+    const onceWrapper = (...args: any[]) => {
+      listener(...args);
+      this.removeListener(event, onceWrapper);
+    };
+    return this.on(event, onceWrapper);
+  }
+
+  listenerCount(event: string): number {
+    return this.events[event]?.length || 0;
+  }
+
+  prependListener(event: string, listener: (...args: any[]) => void): this {
+    if (!this.events[event]) {
+      this.events[event] = [];
+    }
+    this.events[event].unshift(listener);
     return this;
   }
 }
@@ -53,22 +77,23 @@ export default defineConfig(({ mode }) => ({
   define: {
     // Define process.env for libraries that expect it
     'process.env': {},
-    // Add missing process properties that googleapis might use
+    // Add missing process properties
     'process.stdout': { isTTY: true },
     'process.stderr': { isTTY: true },
     'process.version': '"v16.0.0"',
     'process.platform': '"browser"',
+    // Add full process object
     'process': {
       env: {},
       stdout: { isTTY: true },
       stderr: { isTTY: true },
       version: '"v16.0.0"',
-      platform: '"browser"'
+      platform: '"browser"',
+      nextTick: (callback: Function, ...args: any[]) => setTimeout(() => callback(...args), 0)
     },
-    'global': {},
-    // Mock the EventEmitter from Node.js
-    'node:events': {
-      EventEmitter
-    }
+    'global': 'window',
+    // Mock the node:events module correctly
+    'node:events': { EventEmitter },
+    'events': { EventEmitter }
   },
 }));
