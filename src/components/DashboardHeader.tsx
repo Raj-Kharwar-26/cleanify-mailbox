@@ -1,47 +1,39 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown, LogOut, Mail, Search, Settings, User } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { Bell, Mail, Search, Settings, LogOut, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DashboardHeader = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [emailInput, setEmailInput] = useState("");
-  const [userInitials, setUserInitials] = useState("JD");
 
-  useEffect(() => {
-    // Get user data from localStorage if available
-    const userData = localStorage.getItem("userData");
-    if (userData) {
-      try {
-        const { name } = JSON.parse(userData);
-        if (name) {
-          // Extract initials from the name
-          const nameParts = name.split(" ");
-          const initials = nameParts.length > 1 
-            ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
-            : name.substring(0, 2);
-          setUserInitials(initials.toUpperCase());
-        }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
+  // Generate user initials from user's full name or email
+  const getUserInitials = () => {
+    if (!user) return "JD";
+
+    // Check for user metadata (full_name)
+    const fullName = user.user_metadata?.full_name;
+    if (fullName) {
+      const nameParts = fullName.split(" ");
+      const initials = nameParts.length > 1 
+        ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+        : fullName.substring(0, 2);
+      return initials.toUpperCase();
     }
-  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userData");
-    navigate("/");
-    toast({
-      title: "Logged out",
-      description: "You've been successfully logged out.",
-    });
+    // Fallback to email
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+
+    return "JD"; // Default fallback
   };
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -117,7 +109,7 @@ const DashboardHeader = () => {
                 <Button variant="ghost" className="rounded-full h-10 w-10 p-0">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {userInitials}
+                      {getUserInitials()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -134,7 +126,7 @@ const DashboardHeader = () => {
                   <span>Settings</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem onClick={signOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>

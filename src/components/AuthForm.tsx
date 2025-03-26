@@ -1,33 +1,28 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Mail, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 
 const AuthForm = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { signIn, signUp, isLoading } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<string>("login");
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get("signup") === "true" ? "signup" : "login");
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
   });
-
-  // Set initial tab based on query parameter
-  useEffect(() => {
-    const signupParam = searchParams.get("signup");
-    if (signupParam === "true") {
-      setActiveTab("signup");
-    }
-  }, [searchParams]);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -47,28 +42,37 @@ const AuthForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    if (activeTab === "login") {
+      await signIn(formData.email, formData.password);
+    } else {
+      await signUp(formData.email, formData.password, formData.name);
+    }
+  };
 
-    // Simulate authentication process
-    setTimeout(() => {
-      setIsLoading(false);
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       
-      // Store authentication state
-      localStorage.setItem("isAuthenticated", "true");
-      
-      // Store user data (for profile display)
-      const userData = activeTab === "login" 
-        ? { name: formData.name || "John Doe" } // Default for login demo
-        : { name: formData.name };
-      
-      localStorage.setItem("userData", JSON.stringify(userData));
+      if (error) throw error;
       
       toast({
-        title: activeTab === "login" ? "Logged in successfully" : "Account created successfully",
-        description: "Redirecting to dashboard...",
+        title: "Password reset email sent",
+        description: "Check your email for a link to reset your password",
       });
-      navigate("/dashboard");
-    }, 1500);
+      
+      setIsResetOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -106,19 +110,36 @@ const AuthForm = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <a 
-                  href="#" 
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toast({
-                      title: "Reset password",
-                      description: "Password reset functionality would go here",
-                    });
-                  }}
-                >
-                  Forgot password?
-                </a>
+                <Sheet open={isResetOpen} onOpenChange={setIsResetOpen}>
+                  <SheetTrigger asChild>
+                    <button 
+                      type="button"
+                      className="text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Forgot password?
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Reset Password</SheetTitle>
+                      <SheetDescription>Enter your email to receive a password reset link.</SheetDescription>
+                    </SheetHeader>
+                    <form onSubmit={handleResetPassword} className="space-y-6 pt-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email">Email</Label>
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="name@example.com"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">Send Reset Link</Button>
+                    </form>
+                  </SheetContent>
+                </Sheet>
               </div>
               <div className="input-wrapper flex items-center pr-3">
                 <div className="px-3">

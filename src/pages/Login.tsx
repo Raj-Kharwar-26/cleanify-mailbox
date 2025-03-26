@@ -3,17 +3,18 @@ import Navbar from "@/components/Navbar";
 import AuthForm from "@/components/AuthForm";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
 
   // Check if user is already authenticated
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated === "true") {
+    if (!isLoading && user) {
       navigate("/dashboard");
     }
-  }, [navigate]);
+  }, [navigate, user, isLoading]);
 
   return (
     <div className="min-h-screen flex flex-col">
