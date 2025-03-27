@@ -50,7 +50,11 @@ export class EmailService {
   static getAuthUrl(): string {
     try {
       const clientId = this.getClientId();
-      const redirectUri = window.location.origin + '/auth/callback';
+      // Get the exact URL that the app is running on
+      const origin = window.location.origin;
+      const redirectUri = `${origin}/auth/callback`;
+      
+      console.log('Using redirect URI:', redirectUri);
       
       if (!clientId) {
         console.error('No client ID found in localStorage');

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardHeader from "@/components/DashboardHeader";
 import GoogleConfigGuide from "@/utils/GoogleConfigGuide";
 import ClientIdSetup from '@/components/ClientIdSetup';
+import GoogleOAuthInstructions from '@/components/GoogleOAuthInstructions';
 import { useGmailAuth } from '@/hooks/use-gmail-auth';
 import { Button } from "@/components/ui/button";
 
@@ -23,8 +24,8 @@ const GoogleSetupPage: React.FC = () => {
             </Button>
           </div>
 
+          <GoogleOAuthInstructions />
           <ClientIdSetup />
-
           <GoogleConfigGuide clientId={clientId || undefined} />
         </div>
       </main>
